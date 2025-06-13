@@ -44,26 +44,25 @@ Or try this in a minimal Colab notebook:
 ## Visualization, and using the GPU
 
 ```julia
-using Pkg
-Pkg.add(["GLMakie", "ProtPlot"])
-
+using CUDA
 using ChainStorm, GLMakie, ProtPlot
 
-#If GPU:
-using CUDA
 dev = ChainStorm.gpu
-#dev = identity #<- If no GPU
 
+println("Moving model to GPU...")
 model = load_model() |> dev
 
-chainlengths = [54,54]
+chainlengths = [60,65]
 b = dummy_batch(chainlengths)
-paths = ChainStorm.Tracker() #The trajectories will end up in here
-g = flow_quickgen(b, model, d = dev, tracker = paths) #<- Model inference call
-id = join(string.(chainlengths),"_")*"-"*join(rand('A':'Z', 4))
-export_pdb("$(id).pdb", g, b.chainids, b.resinds) #<- Save PDB
+paths = ChainStorm.Tracker()
+println("Starting protein generation on GPU... this should be much faster.")
+g = flow_quickgen(b, model, d = dev, tracker = paths)
+id = "GPU-" * join(string.(chainlengths),"_")*"-"*join(rand('A':'Z', 4))
+export_pdb("$(id).pdb", g, b.chainids, b.resinds)
 samp = gen2prot(g, b.chainids, b.resinds)
-animate_trajectory("$(id).mp4", samp, first_trajectory(paths), viewmode = :fit) #<- Animate design process
+println("Generation complete. Now creating animation...")
+animate_trajectory("$(id).mp4", samp, first_trajectory(paths), viewmode = :fit)
+println("Done! Find your files: $(id).pdb and $(id).mp4")
 ```
 
 Note: If you need the animations via GLMakie to run headless, in linux you can install xvfb, then run these in the terminal before starting your Julia session/script:
